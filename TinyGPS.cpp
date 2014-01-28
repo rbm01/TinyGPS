@@ -21,12 +21,19 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+#ifndef ARDUINO
+#include <math.h>
+#include <time.h>
+#include <stdlib.h>
+#include <stdio.h>
+#endif /* ARDUINO */
+
 #include "TinyGPS.h"
 
 #define _GPRMC_TERM   "GPRMC"
 #define _GPGGA_TERM   "GPGGA"
 
-TinyGPS::TinyGPS()
+TinyGPS::TinyGPS(bool allowRTCtime)
   :  _time(GPS_INVALID_TIME)
   ,  _date(GPS_INVALID_DATE)
   ,  _latitude(GPS_INVALID_ANGLE)
@@ -44,6 +51,8 @@ TinyGPS::TinyGPS()
   ,  _term_number(0)
   ,  _term_offset(0)
   ,  _gps_data_good(false)
+  ,  _gps_time_good(false)
+  ,  _use_rtc_time(allowRTCtime)
 #ifndef _GPS_NO_STATS
   ,  _encoded_characters(0)
   ,  _good_sentences(0)
@@ -52,6 +61,21 @@ TinyGPS::TinyGPS()
 {
   _term[0] = '\0';
 }
+
+#ifndef ARDUINO
+#define TWO_PI M_PI * 2
+
+unsigned long millis()
+{
+    struct  timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+}
+
+inline float radians(float degrees) { return M_PI * (degrees / 180); }
+inline float degrees(float radians) { return (radians * 180) / M_PI; }
+inline float sq(float f)            { return f * f; }
+#endif /* ARDUINO */
 
 //
 // public methods
@@ -79,6 +103,7 @@ bool TinyGPS::encode(char c)
     ++_term_number;
     _term_offset = 0;
     _is_checksum_term = c == '*';
+    //printf("TinyGPS::encode(): About to return %s\n", valid_sentence ? "true" : "false");
     return valid_sentence;
 
   case '$': // sentence begin
@@ -111,7 +136,7 @@ void TinyGPS::stats(unsigned long *chars, unsigned short *sentences, unsigned sh
 //
 // internal utilities
 //
-int TinyGPS::from_hex(char a) 
+int TinyGPS::from_hex(char a)
 {
   if (a >= 'A' && a <= 'F')
     return a - 'A' + 10;
@@ -168,27 +193,35 @@ bool TinyGPS::term_complete()
   if (_is_checksum_term)
   {
     byte checksum = 16 * from_hex(_term[0]) + from_hex(_term[1]);
+    //printf("TinyGPS::term_complete(): inside \"if (_is_checksum_term).  checksum=0x%02x  _parity=0x%02x\"\n", checksum, _parity);
     if (checksum == _parity)
     {
-      if (_gps_data_good)
+      //printf("TinyGPS::term_complete(): inside \"if (checksum == _parity)\". _gps_time_good=%s\n", _gps_time_good ? "true" : "false");
+      if (_gps_data_good || (_use_rtc_time && _gps_time_good))
       {
 #ifndef _GPS_NO_STATS
         ++_good_sentences;
 #endif
+
         _last_time_fix = _new_time_fix;
-        _last_position_fix = _new_position_fix;
 
         switch(_sentence_type)
         {
         case _GPS_SENTENCE_GPRMC:
           _time      = _new_time;
           _date      = _new_date;
-          _latitude  = _new_latitude;
-          _longitude = _new_longitude;
-          _speed     = _new_speed;
-          _course    = _new_course;
+          if (_gps_data_good)
+          {
+              _last_position_fix = _new_position_fix;
+              _latitude  = _new_latitude;
+              _longitude = _new_longitude;
+              _speed     = _new_speed;
+              _course    = _new_course;
+          }
+          // printf("TinyGPS::term_complete(): inside \"case _GPS_SENTENCE_GPRMC\".\n");
           break;
         case _GPS_SENTENCE_GPGGA:
+          _last_position_fix = _new_position_fix;
           _altitude  = _new_altitude;
           _time      = _new_time;
           _latitude  = _new_latitude;
@@ -259,6 +292,7 @@ bool TinyGPS::term_complete()
       break;
     case COMBINE(_GPS_SENTENCE_GPRMC, 9): // Date (GPRMC)
       _new_date = gpsatol(_term);
+      _gps_time_good = (_new_time && _new_date);
       break;
     case COMBINE(_GPS_SENTENCE_GPGGA, 6): // Fix data (GPGGA)
       _gps_data_good = _term[0] > '0';
@@ -293,10 +327,10 @@ int TinyGPS::gpsstrcmp(const char *str1, const char *str2)
 }
 
 /* static */
-float TinyGPS::distance_between (float lat1, float long1, float lat2, float long2) 
+float TinyGPS::distance_between (float lat1, float long1, float lat2, float long2)
 {
-  // returns distance in meters between two positions, both specified 
-  // as signed decimal-degrees latitude and longitude. Uses great-circle 
+  // returns distance in meters between two positions, both specified
+  // as signed decimal-degrees latitude and longitude. Uses great-circle
   // distance computation for hypothetical sphere of radius 6372795 meters.
   // Because Earth is no exact sphere, rounding errors may be up to 0.5%.
   // Courtesy of Maarten Lamers
@@ -309,16 +343,16 @@ float TinyGPS::distance_between (float lat1, float long1, float lat2, float long
   float clat1 = cos(lat1);
   float slat2 = sin(lat2);
   float clat2 = cos(lat2);
-  delta = (clat1 * slat2) - (slat1 * clat2 * cdlong); 
-  delta = sq(delta); 
-  delta += sq(clat2 * sdlong); 
-  delta = sqrt(delta); 
-  float denom = (slat1 * slat2) + (clat1 * clat2 * cdlong); 
-  delta = atan2(delta, denom); 
-  return delta * 6372795; 
+  delta = (clat1 * slat2) - (slat1 * clat2 * cdlong);
+  delta = sq(delta);
+  delta += sq(clat2 * sdlong);
+  delta = sqrt(delta);
+  float denom = (slat1 * slat2) + (clat1 * clat2 * cdlong);
+  delta = atan2(delta, denom);
+  return delta * 6372795;
 }
 
-float TinyGPS::course_to (float lat1, float long1, float lat2, float long2) 
+float TinyGPS::course_to (float lat1, float long1, float lat2, float long2)
 {
   // returns course in degrees (North=0, West=270) from position 1 to position 2,
   // both specified as signed decimal-degrees latitude and longitude.
@@ -352,7 +386,7 @@ void TinyGPS::get_position(long *latitude, long *longitude, unsigned long *fix_a
 {
   if (latitude) *latitude = _latitude;
   if (longitude) *longitude = _longitude;
-  if (fix_age) *fix_age = _last_position_fix == GPS_INVALID_FIX_TIME ? 
+  if (fix_age) *fix_age = _last_position_fix == GPS_INVALID_FIX_TIME ?
    GPS_INVALID_AGE : millis() - _last_position_fix;
 }
 
@@ -361,7 +395,7 @@ void TinyGPS::get_datetime(unsigned long *date, unsigned long *time, unsigned lo
 {
   if (date) *date = _date;
   if (time) *time = _time;
-  if (age) *age = _last_time_fix == GPS_INVALID_FIX_TIME ? 
+  if (age) *age = _last_time_fix == GPS_INVALID_FIX_TIME ?
    GPS_INVALID_AGE : millis() - _last_time_fix;
 }
 
@@ -373,25 +407,40 @@ void TinyGPS::f_get_position(float *latitude, float *longitude, unsigned long *f
   *longitude = lat == GPS_INVALID_ANGLE ? GPS_INVALID_F_ANGLE : (lon / 1000000.0);
 }
 
-void TinyGPS::crack_datetime(int *year, byte *month, byte *day, 
+void TinyGPS::crack_datetime(int *year, byte *month, byte *day,
   byte *hour, byte *minute, byte *second, byte *hundredths, unsigned long *age)
 {
   unsigned long date, time;
+  uint16_t t1, t2;              // Used to hold temporary values during calculation
   get_datetime(&date, &time, age);
-  if (year) 
+
+  // decompose date "ddmmyy"
+  t1 = date / 100;            // t1 contains ddmm
+  if (year)
   {
-    *year = date % 100;
-    *year += *year > 80 ? 1900 : 2000;
+      t2 = date - (t1 * 100); // t2 contains yy
+      *year = t2;
+      *year += *year > 80 ? 1900 : 2000;
   }
-  if (month) *month = (date / 100) % 100;
-  if (day) *day = date / 10000;
-  if (hour) *hour = time / 1000000;
-  if (minute) *minute = (time / 10000) % 100;
-  if (second) *second = (time / 100) % 100;
-  if (hundredths) *hundredths = time % 100;
+
+  t2 = t1 / 100;              // t2 contains dd
+  if (month) *month = t1 - (t2 * 100);
+  if (day) *day = t2;
+
+  // Decompose time "hhmmsscc"
+  // Reuse the "date variable because we need a long here
+  date = time / 100;          // date contains hhmmss
+  if (hundredths) *hundredths = time - (date * 100);
+
+  t1 = date  / 100;           // t1 contains hhmm
+  if (second) *second = date - (t1 * 100);
+
+  t2 = t1 / 100;              // t2 contains hh
+  if (hour) *hour = t2;
+  if (minute) *minute = t1 - (t2 * 100);
 }
 
-float TinyGPS::f_altitude()    
+float TinyGPS::f_altitude()
 {
   return _altitude == GPS_INVALID_ALTITUDE ? GPS_INVALID_F_ALTITUDE : _altitude / 100.0;
 }
@@ -401,27 +450,27 @@ float TinyGPS::f_course()
   return _course == GPS_INVALID_ANGLE ? GPS_INVALID_F_ANGLE : _course / 100.0;
 }
 
-float TinyGPS::f_speed_knots() 
+float TinyGPS::f_speed_knots()
 {
   return _speed == GPS_INVALID_SPEED ? GPS_INVALID_F_SPEED : _speed / 100.0;
 }
 
-float TinyGPS::f_speed_mph()   
-{ 
+float TinyGPS::f_speed_mph()
+{
   float sk = f_speed_knots();
-  return sk == GPS_INVALID_F_SPEED ? GPS_INVALID_F_SPEED : _GPS_MPH_PER_KNOT * sk; 
+  return sk == GPS_INVALID_F_SPEED ? GPS_INVALID_F_SPEED : _GPS_MPH_PER_KNOT * sk;
 }
 
-float TinyGPS::f_speed_mps()   
-{ 
+float TinyGPS::f_speed_mps()
+{
   float sk = f_speed_knots();
-  return sk == GPS_INVALID_F_SPEED ? GPS_INVALID_F_SPEED : _GPS_MPS_PER_KNOT * sk; 
+  return sk == GPS_INVALID_F_SPEED ? GPS_INVALID_F_SPEED : _GPS_MPS_PER_KNOT * sk;
 }
 
-float TinyGPS::f_speed_kmph()  
-{ 
+float TinyGPS::f_speed_kmph()
+{
   float sk = f_speed_knots();
-  return sk == GPS_INVALID_F_SPEED ? GPS_INVALID_F_SPEED : _GPS_KMPH_PER_KNOT * sk; 
+  return sk == GPS_INVALID_F_SPEED ? GPS_INVALID_F_SPEED : _GPS_KMPH_PER_KNOT * sk;
 }
 
 const float TinyGPS::GPS_INVALID_F_ANGLE = 1000.0;

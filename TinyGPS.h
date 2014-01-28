@@ -24,11 +24,15 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #ifndef TinyGPS_h
 #define TinyGPS_h
 
+#ifdef __linux__
+typedef unsigned char byte;
+#else
 #if defined(ARDUINO) && ARDUINO >= 100
 #include "Arduino.h"
 #else
 #include "WProgram.h"
 #endif
+#endif /* __linux__ */
 
 #include <stdlib.h>
 
@@ -53,7 +57,7 @@ public:
 
   static const float GPS_INVALID_F_ANGLE, GPS_INVALID_F_ALTITUDE, GPS_INVALID_F_SPEED;
 
-  TinyGPS();
+  TinyGPS(bool allowRTCtime = false);
   bool encode(char c); // process one character received from GPS
   TinyGPS &operator << (char c) {encode(c); return *this;}
 
@@ -103,6 +107,7 @@ private:
   enum {_GPS_SENTENCE_GPGGA, _GPS_SENTENCE_GPRMC, _GPS_SENTENCE_OTHER};
 
   // properties
+  bool _use_rtc_time;           // return time even if no fix on GPS
   unsigned long _time, _new_time;
   unsigned long _date, _new_date;
   long _latitude, _new_latitude;
@@ -124,6 +129,7 @@ private:
   byte _term_number;
   byte _term_offset;
   bool _gps_data_good;
+  bool _gps_time_good;
 
 #ifndef _GPS_NO_STATS
   // statistics
