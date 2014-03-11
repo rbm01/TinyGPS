@@ -21,6 +21,28 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+/*
+ * Additional notes by RBM 2014-03-12
+ * **********************************
+ *
+ * Time accuracy depends on the offset between the UTC edge (usually the PPS)
+ * and the transmission of the NMEA messages. If the PPS is not available,
+ * which is often the case, then this offset value is unknown, but can
+ * typically be a couple of hundred milliseconds, which is further
+ * exacerbated by a significant jitter.
+ *
+ * The first NMEA sentence after the UTC edge is typically $GPRMC, which
+ * contains both date and time, so I have modified the code in TinyGPS.cpp
+ * to record the millis() when a '$' character is received as the GPS time
+ * fix reference, rather than when the time is decoded.
+ *
+ * In addition, I have modified the code in TinyGPS.cpp to accept time
+ * from the module even when the $GPRMC status flag is not 'A' (valid),
+ * provided the object is instantiated with the new 'allowRTCtime' flag.
+ * This means the module will return time from the GPS module on-board
+ * RTC (real time clock) even when it does not have a GPS lock.
+ */
+
 #ifndef ARDUINO
 #include <math.h>
 #include <time.h>
@@ -63,13 +85,28 @@ TinyGPS::TinyGPS(bool allowRTCtime)
 }
 
 #ifndef ARDUINO
+/*
+ * Resolve some undefined functions and #defines when this code is being
+ * used in a non-Arduino environment.
+ */
+
 #define TWO_PI M_PI * 2
 
 unsigned long millis()
 {
-    struct  timespec ts;
+    static unsigned long base_millis = -1;
+    struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
-    return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+
+    if (base_millis == (unsigned long)-1)
+    {
+        base_millis = ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+        return 0;
+    }
+    else
+    {
+        return ts.tv_sec * 1000 + ts.tv_nsec / 1000000 - base_millis;
+    }
 }
 
 inline float radians(float degrees) { return M_PI * (degrees / 180); }
@@ -112,6 +149,8 @@ bool TinyGPS::encode(char c)
     _sentence_type = _GPS_SENTENCE_OTHER;
     _is_checksum_term = false;
     _gps_data_good = false;
+    _gps_time_good = false;
+    _new_time_fix = millis();   // synch time fix age at start of sentence
     return valid_sentence;
   }
 
@@ -203,13 +242,12 @@ bool TinyGPS::term_complete()
         ++_good_sentences;
 #endif
 
-        _last_time_fix = _new_time_fix;
-
         switch(_sentence_type)
         {
         case _GPS_SENTENCE_GPRMC:
           _time      = _new_time;
           _date      = _new_date;
+          _last_time_fix = _new_time_fix;
           if (_gps_data_good)
           {
               _last_position_fix = _new_position_fix;
@@ -257,10 +295,12 @@ bool TinyGPS::term_complete()
   if (_sentence_type != _GPS_SENTENCE_OTHER && _term[0])
     switch(COMBINE(_sentence_type, _term_number))
   {
-    case COMBINE(_GPS_SENTENCE_GPRMC, 1): // Time in both sentences
-    case COMBINE(_GPS_SENTENCE_GPGGA, 1):
+    case COMBINE(_GPS_SENTENCE_GPRMC, 1): // Time
       _new_time = parse_decimal();
-      _new_time_fix = millis();
+      // _new_time_fix = millis();        // _new_time_fix set when '$' received
+      break;
+    case COMBINE(_GPS_SENTENCE_GPGGA, 1): // Time
+      // Ignore this time because it's already skewed by > 100mS
       break;
     case COMBINE(_GPS_SENTENCE_GPRMC, 2): // GPRMC validity
       _gps_data_good = _term[0] == 'A';
