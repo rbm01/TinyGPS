@@ -24,15 +24,17 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #ifndef TinyGPS_h
 #define TinyGPS_h
 
-#ifdef __linux__
-typedef unsigned char byte;
-#else
-#if defined(ARDUINO) && ARDUINO >= 100
+#ifdef ARDUINO
+#if ARDUINO >= 100
 #include "Arduino.h"
 #else
 #include "WProgram.h"
 #endif
-#endif /* __linux__ */
+#else /* ARDUINO */
+#include <inttypes.h>
+typedef unsigned char byte;
+#endif /* ARDUINO */
+
 
 #include <stdlib.h>
 

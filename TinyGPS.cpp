@@ -48,6 +48,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <time.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "arduino_util.h"
 #endif /* ARDUINO */
 
 #include "TinyGPS.h"
@@ -91,23 +92,6 @@ TinyGPS::TinyGPS(bool allowRTCtime)
  */
 
 #define TWO_PI M_PI * 2
-
-unsigned long millis()
-{
-    static unsigned long base_millis = -1;
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-
-    if (base_millis == (unsigned long)-1)
-    {
-        base_millis = ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
-        return 0;
-    }
-    else
-    {
-        return ts.tv_sec * 1000 + ts.tv_nsec / 1000000 - base_millis;
-    }
-}
 
 inline float radians(float degrees) { return M_PI * (degrees / 180); }
 inline float degrees(float radians) { return (radians * 180) / M_PI; }
