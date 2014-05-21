@@ -57,7 +57,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define _GPGGA_TERM   "GPGGA"
 
 TinyGPS::TinyGPS(bool allowRTCtime)
-  :  _time(GPS_INVALID_TIME)
+  :  _use_rtc_time(allowRTCtime)
+  ,  _time(GPS_INVALID_TIME)
   ,  _date(GPS_INVALID_DATE)
   ,  _latitude(GPS_INVALID_ANGLE)
   ,  _longitude(GPS_INVALID_ANGLE)
@@ -75,7 +76,6 @@ TinyGPS::TinyGPS(bool allowRTCtime)
   ,  _term_offset(0)
   ,  _gps_data_good(false)
   ,  _gps_time_good(false)
-  ,  _use_rtc_time(allowRTCtime)
 #ifndef _GPS_NO_STATS
   ,  _encoded_characters(0)
   ,  _good_sentences(0)
