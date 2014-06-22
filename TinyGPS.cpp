@@ -410,11 +410,17 @@ void TinyGPS::get_position(long *latitude, long *longitude, unsigned long *fix_a
 {
   if (latitude) *latitude = _latitude;
   if (longitude) *longitude = _longitude;
+
+#ifdef ARDUINO
   if (fix_age) *fix_age = _last_position_fix == GPS_INVALID_FIX_TIME ?
    GPS_INVALID_AGE : millis() - _last_position_fix;
+#else /* ARDUINO */
+  if (fix_age) *fix_age = 0;
+#endif /* ARDUINO */
 }
 
 // date as ddmmyy, time as hhmmsscc, and age in milliseconds
+#ifdef ARDUINO
 void TinyGPS::get_datetime(unsigned long *date, unsigned long *time, unsigned long *age)
 {
   if (date) *date = _date;
@@ -422,6 +428,39 @@ void TinyGPS::get_datetime(unsigned long *date, unsigned long *time, unsigned lo
   if (age) *age = _last_time_fix == GPS_INVALID_FIX_TIME ?
    GPS_INVALID_AGE : millis() - _last_time_fix;
 }
+#else /* ARDUINO */
+void TinyGPS::get_datetime(unsigned long *date, unsigned long *timeval, unsigned long *age)
+{
+    struct timespec ts;
+    struct tm tt;
+
+    clock_gettime(CLOCK_REALTIME, &ts);
+
+    gmtime_r(&ts.tv_sec, &tt);      // thread safe version of localtime()
+
+    if (date)
+    {
+        if (tt.tm_year >= 100)
+            tt.tm_year -= 100;
+        *date = tt.tm_year + (tt.tm_mon + 1) * 100 + tt.tm_mday * 10000;
+    }
+    if (timeval)
+        *timeval = tt.tm_hour * 1000000 + tt.tm_min * 10000 + tt.tm_sec * 100 + ts.tv_nsec / 10000000;
+    if (age)
+    {
+        *age = 130;     // just an arbitary value
+        //*age = 0;     // just an arbitary value
+    }
+
+#ifdef DEBUG_GPSTIME
+    char buf[100];
+    snprintf_P(buf, sizeof(buf),
+               PSTR("TinyGPS::get_datetime(): date=%06lu, timeval=%08lu, age=%lu"),
+               date ? *date : 0, timeval ? *timeval : 0, age ? *age : 0);
+    Serial.println(buf);
+#endif /* DEBUG_GPSTIME */
+}
+#endif /* ARDUINO */
 
 void TinyGPS::f_get_position(float *latitude, float *longitude, unsigned long *fix_age)
 {
