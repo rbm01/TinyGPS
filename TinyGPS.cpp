@@ -434,7 +434,8 @@ void TinyGPS::get_datetime(unsigned long *date, unsigned long *timeval, unsigned
     struct timespec ts;
     struct tm tt;
 
-    clock_gettime(CLOCK_REALTIME, &ts);
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    ts.tv_sec += monotonic_clkGpsOffset;
 
     gmtime_r(&ts.tv_sec, &tt);      // thread safe version of localtime()
 
