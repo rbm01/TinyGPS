@@ -123,6 +123,7 @@ private:
 
   unsigned long _last_time_fix, _new_time_fix;
   unsigned long _last_position_fix, _new_position_fix;
+  unsigned long _last_character_received_time;
 
   // parsing state variables
   byte _parity;

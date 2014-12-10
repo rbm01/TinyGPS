@@ -69,6 +69,7 @@ TinyGPS::TinyGPS(bool allowRTCtime)
   ,  _numsats(GPS_INVALID_SATELLITES)
   ,  _last_time_fix(GPS_INVALID_FIX_TIME)
   ,  _last_position_fix(GPS_INVALID_FIX_TIME)
+  ,  _last_character_received_time(0)
   ,  _parity(0)
   ,  _is_checksum_term(false)
   ,  _sentence_type(_GPS_SENTENCE_OTHER)
@@ -105,6 +106,7 @@ inline float sq(float f)            { return f * f; }
 bool TinyGPS::encode(char c)
 {
   bool valid_sentence = false;
+  unsigned long charReadTime = millis();
 
 #ifndef _GPS_NO_STATS
   ++_encoded_characters;
@@ -125,7 +127,7 @@ bool TinyGPS::encode(char c)
     _term_offset = 0;
     _is_checksum_term = c == '*';
     //printf("TinyGPS::encode(): About to return %s\n", valid_sentence ? "true" : "false");
-    return valid_sentence;
+    break;
 
   case '$': // sentence begin
     _term_number = _term_offset = 0;
@@ -134,15 +136,33 @@ bool TinyGPS::encode(char c)
     _is_checksum_term = false;
     _gps_data_good = false;
     _gps_time_good = false;
-    _new_time_fix = millis();   // synch time fix age at start of sentence
-    return valid_sentence;
+    //_new_time_fix = millis();   // synch time fix age at start of sentence
+
+    // Detect the start of a new "paragraph" of NMEA sentences by looking
+    // for a long gap between characters.
+    //
+    // A continuous sequence of characters at 4800 baud will be spaced approx
+    // 2mS apart (10/4800 S). At 2400 baud this becomes 4mS, and at 9600
+    // baud, 1mS. Here we use an arbitary value of 100mS to indicate
+    // the minimum time between one reporting cycle and the next.
+    // Because this character is a '$' we know it's the start of a sentence.
+    if ((int32_t)(charReadTime - _last_character_received_time) > 100)
+    {
+      _new_time_fix = charReadTime; // synch time fix age at start of sentence
+    }
+
+    break;
+
+  default:
+    // ordinary characters
+    if (_term_offset < sizeof(_term) - 1)
+      _term[_term_offset++] = c;
+    if (!_is_checksum_term)
+      _parity ^= c;
+    break;
   }
 
-  // ordinary characters
-  if (_term_offset < sizeof(_term) - 1)
-    _term[_term_offset++] = c;
-  if (!_is_checksum_term)
-    _parity ^= c;
+  _last_character_received_time = charReadTime;
 
   return valid_sentence;
 }
