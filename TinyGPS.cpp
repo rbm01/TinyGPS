@@ -55,10 +55,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #define _GPRMC_TERM   "GPRMC"
 #define _GPGGA_TERM   "GPGGA"
+#define _GPGSV_TERM   "GPGSV"
+#define _GPGSA_TERM   "GPGSA"
 
-TinyGPS::TinyGPS(bool allowRTCtime)
-  :  _use_rtc_time(allowRTCtime)
-  ,  _time(GPS_INVALID_TIME)
+TinyGPS::TinyGPS()
+  :  _time(GPS_INVALID_TIME)
   ,  _date(GPS_INVALID_DATE)
   ,  _latitude(GPS_INVALID_ANGLE)
   ,  _longitude(GPS_INVALID_ANGLE)
@@ -66,7 +67,9 @@ TinyGPS::TinyGPS(bool allowRTCtime)
   ,  _speed(GPS_INVALID_SPEED)
   ,  _course(GPS_INVALID_ANGLE)
   ,  _hdop(GPS_INVALID_HDOP)
-  ,  _numsats(GPS_INVALID_SATELLITES)
+  ,  _satsinview(0)
+  ,  _satsused(0)
+  ,  _fixtype(GPS_FIX_NO_FIX)
   ,  _last_time_fix(GPS_INVALID_FIX_TIME)
   ,  _last_position_fix(GPS_INVALID_FIX_TIME)
   ,  _last_character_received_time(0)
@@ -75,8 +78,6 @@ TinyGPS::TinyGPS(bool allowRTCtime)
   ,  _sentence_type(_GPS_SENTENCE_OTHER)
   ,  _term_number(0)
   ,  _term_offset(0)
-  ,  _gps_data_good(false)
-  ,  _gps_time_good(false)
 #ifndef _GPS_NO_STATS
   ,  _encoded_characters(0)
   ,  _good_sentences(0)
@@ -134,8 +135,6 @@ bool TinyGPS::encode(char c)
     _parity = 0;
     _sentence_type = _GPS_SENTENCE_OTHER;
     _is_checksum_term = false;
-    _gps_data_good = false;
-    _gps_time_good = false;
     //_new_time_fix = millis();   // synch time fix age at start of sentence
 
     // Detect the start of a new "paragraph" of NMEA sentences by looking
@@ -240,41 +239,41 @@ bool TinyGPS::term_complete()
     if (checksum == _parity)
     {
       //printf("TinyGPS::term_complete(): inside \"if (checksum == _parity)\". _gps_time_good=%s\n", _gps_time_good ? "true" : "false");
-      if (_gps_data_good || (_use_rtc_time && _gps_time_good))
-      {
 #ifndef _GPS_NO_STATS
-        ++_good_sentences;
+      ++_good_sentences;
 #endif
 
-        switch(_sentence_type)
-        {
-        case _GPS_SENTENCE_GPRMC:
-          _time      = _new_time;
-          _date      = _new_date;
-          _last_time_fix = _new_time_fix;
-          if (_gps_data_good)
-          {
-              _last_position_fix = _new_position_fix;
-              _latitude  = _new_latitude;
-              _longitude = _new_longitude;
-              _speed     = _new_speed;
-              _course    = _new_course;
-          }
-          // printf("TinyGPS::term_complete(): inside \"case _GPS_SENTENCE_GPRMC\".\n");
-          break;
-        case _GPS_SENTENCE_GPGGA:
-          _last_position_fix = _new_position_fix;
-          _altitude  = _new_altitude;
-          _time      = _new_time;
-          _latitude  = _new_latitude;
-          _longitude = _new_longitude;
-          _numsats   = _new_numsats;
-          _hdop      = _new_hdop;
-          break;
-        }
-
-        return true;
+      switch(_sentence_type)
+      {
+      case _GPS_SENTENCE_GPRMC:
+        _time      = _new_time;
+        _date      = _new_date;
+        _last_time_fix = _new_time_fix;
+        _last_position_fix = _new_position_fix;
+        _latitude  = _new_latitude;
+        _longitude = _new_longitude;
+        _speed     = _new_speed;
+        _course    = _new_course;
+        // printf("TinyGPS::term_complete(): inside \"case _GPS_SENTENCE_GPRMC\".\n");
+        break;
+      case _GPS_SENTENCE_GPGGA:
+        _last_position_fix = _new_position_fix;
+        _altitude  = _new_altitude;
+        _time      = _new_time;
+        _latitude  = _new_latitude;
+        _longitude = _new_longitude;
+        _hdop      = _new_hdop;
+        break;
+      case _GPS_SENTENCE_GPGSV:
+        _satsinview = _new_satsinview;
+        break;
+      case _GPS_SENTENCE_GPGSA:
+        _satsused = _new_satsused;
+        _fixtype = _new_fixtype;
+        break;
       }
+
+      return true;
     }
 
 #ifndef _GPS_NO_STATS
@@ -291,14 +290,48 @@ bool TinyGPS::term_complete()
       _sentence_type = _GPS_SENTENCE_GPRMC;
     else if (!gpsstrcmp(_term, _GPGGA_TERM))
       _sentence_type = _GPS_SENTENCE_GPGGA;
+    else if (!gpsstrcmp(_term, _GPGSV_TERM))
+      _sentence_type = _GPS_SENTENCE_GPGSV;
+    else if (!gpsstrcmp(_term, _GPGSA_TERM))
+    {
+      _sentence_type = _GPS_SENTENCE_GPGSA;
+      _new_satsused  = 0;
+      _new_fixtype   = GPS_INVALID_FIXTYPE;
+    }
     else
       _sentence_type = _GPS_SENTENCE_OTHER;
     return false;
   }
 
-  if (_sentence_type != _GPS_SENTENCE_OTHER && _term[0])
-    switch(COMBINE(_sentence_type, _term_number))
+  if (_sentence_type == _GPS_SENTENCE_GPGSV && _term_number == 3
+      && _term[0])
   {
+    // we've got our number of sats
+    // NOTE: we will more than likely hit this a few times in a row, because
+    // there are usually multiple GPGSV sentences to describe all of the
+    // satelites, but that's OK because the each contain the total number
+    // of satellites in view.
+    _new_satsinview = (unsigned char) gpsatol(_term);
+  }
+  else if (_sentence_type == _GPS_SENTENCE_GPGSA)
+  {
+    if (_term_number == 2 && _term[0])  // Fix type
+    {
+      _new_fixtype = (unsigned char) gpsatol(_term);
+    }
+    else if (_term_number >= 3 && _term_number <= 14 && _term[0])
+    {
+      // Count our satellites used
+      _new_satsused++;
+    }
+//  if (_term_number == 15)  // PDOP
+//  if (_term_number == 16)  // HDOP
+//  if (_term_number == 17)  // VDOP
+  }       
+  else if (_sentence_type != _GPS_SENTENCE_OTHER && _term[0])
+  {
+    switch(COMBINE(_sentence_type, _term_number))
+    {
     case COMBINE(_GPS_SENTENCE_GPRMC, 1): // Time
       _new_time = parse_decimal();
       // _new_time_fix = millis();        // _new_time_fix set when '$' received
@@ -341,17 +374,14 @@ bool TinyGPS::term_complete()
     case COMBINE(_GPS_SENTENCE_GPGGA, 6): // Fix data (GPGGA)
       _gps_data_good = _term[0] > '0';
       break;
-    case COMBINE(_GPS_SENTENCE_GPGGA, 7): // Satellites used (GPGGA)
-      _new_numsats = (unsigned char)atoi(_term);
-      break;
     case COMBINE(_GPS_SENTENCE_GPGGA, 8): // HDOP
       _new_hdop = parse_decimal();
       break;
     case COMBINE(_GPS_SENTENCE_GPGGA, 9): // Altitude (GPGGA)
       _new_altitude = parse_decimal();
       break;
+    }
   }
-
   return false;
 }
 

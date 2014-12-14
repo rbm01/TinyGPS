@@ -6,6 +6,9 @@ Precision improvements suggested by Wayne Holder.
 Copyright (C) 2008-2013 Mikal Hart
 All rights reserved.
 
+  Satellite Count Mod - by Brett Hagman
+  http://www.roguerobotics.com/
+
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
 License as published by the Free Software Foundation; either
@@ -50,16 +53,27 @@ class TinyGPS
 {
 public:
   enum {
-    GPS_INVALID_AGE = 0xFFFFFFFF,      GPS_INVALID_ANGLE = 999999999, 
-    GPS_INVALID_ALTITUDE = 999999999,  GPS_INVALID_DATE = 0,
-    GPS_INVALID_TIME = 0xFFFFFFFF,		 GPS_INVALID_SPEED = 999999999, 
-    GPS_INVALID_FIX_TIME = 0xFFFFFFFF, GPS_INVALID_SATELLITES = 0xFF,
-    GPS_INVALID_HDOP = 0xFFFFFFFF
+    GPS_INVALID_AGE        = 0xFFFFFFFF,
+    GPS_INVALID_ANGLE      = 999999999, 
+    GPS_INVALID_ALTITUDE   = 999999999,
+    GPS_INVALID_DATE       = 0,
+    GPS_INVALID_TIME       = 0xFFFFFFFF,
+    GPS_INVALID_SPEED      = 999999999, 
+    GPS_INVALID_FIX_TIME   = 0xFFFFFFFF,
+    GPS_INVALID_SATELLITES = 0xFF,
+    GPS_INVALID_HDOP       = 0xFFFFFFFF,
+    GPS_INVALID_FIXTYPE    = 0xFF
+  };
+    
+  enum {
+      GPS_FIX_NO_FIX = 1,
+      GPS_FIX_2D     = 2,
+      GPS_FIX_3D     = 3
   };
 
   static const float GPS_INVALID_F_ANGLE, GPS_INVALID_F_ALTITUDE, GPS_INVALID_F_SPEED;
 
-  TinyGPS(bool allowRTCtime = false);
+  TinyGPS();
   bool encode(char c); // process one character received from GPS
   TinyGPS &operator << (char c) {encode(c); return *this;}
 
@@ -79,12 +93,17 @@ public:
   // speed in last full GPRMC sentence in 100ths of a knot
   inline unsigned long speed() { return _speed; }
 
-  // satellites used in last full GPGGA sentence
-  //inline unsigned short satellites() { return _numsats; }
-  inline unsigned short satellites() { return _new_numsats; }
-
   // horizontal dilution of precision in 100ths
   inline unsigned long hdop() { return _hdop; }
+
+    // number of satellites in view (GPGSV sentence)
+  unsigned char satsinview() { return _satsinview; }
+
+  // number of satellites used for fix (GPGSA sentence)
+  unsigned char satsused() { return _satsused; }
+  
+  // get the fix type
+  unsigned char fixtype() { return _fixtype; }
 
   void f_get_position(float *latitude, float *longitude, unsigned long *fix_age = 0);
   void crack_datetime(int *year, byte *month, byte *day, 
@@ -107,7 +126,13 @@ public:
 #endif
 
 private:
-  enum {_GPS_SENTENCE_GPGGA, _GPS_SENTENCE_GPRMC, _GPS_SENTENCE_OTHER};
+  enum {
+      _GPS_SENTENCE_GPGGA,
+      _GPS_SENTENCE_GPRMC,
+      _GPS_SENTENCE_GPGSV,
+      _GPS_SENTENCE_GPGSA,
+      _GPS_SENTENCE_OTHER
+  };
 
   // properties
   bool _use_rtc_time;           // return time even if no fix on GPS
@@ -119,7 +144,9 @@ private:
   unsigned long  _speed, _new_speed;
   unsigned long  _course, _new_course;
   unsigned long  _hdop, _new_hdop;
-  unsigned short _numsats, _new_numsats;
+  unsigned char  _satsinview, _new_satsinview;
+  unsigned char  _satsused, _new_satsused;
+  unsigned char  _fixtype, _new_fixtype;
 
   unsigned long _last_time_fix, _new_time_fix;
   unsigned long _last_position_fix, _new_position_fix;

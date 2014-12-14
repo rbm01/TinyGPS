@@ -8,12 +8,13 @@
 */
 
 TinyGPS gps;
-SoftwareSerial ss(4, 3);
+//SoftwareSerial ss(4, 3);
+HardwareSerial &ss = Serial1;
 
 void setup()
 {
   Serial.begin(115200);
-  ss.begin(4800);
+  ss.begin(38400);
   
   Serial.print("Simple TinyGPS library v. "); Serial.println(TinyGPS::library_version());
   Serial.println("by Mikal Hart");
@@ -47,8 +48,12 @@ void loop()
     Serial.print(flat == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : flat, 6);
     Serial.print(" LON=");
     Serial.print(flon == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : flon, 6);
-    Serial.print(" SAT=");
-    Serial.print(gps.satellites() == TinyGPS::GPS_INVALID_SATELLITES ? 0 : gps.satellites());
+    Serial.print(" SATS_IN_VIEW=");
+    Serial.print(gps.satsinview() == TinyGPS::GPS_INVALID_SATELLITES ? 0 : gps.satsinview());
+    Serial.print(" SATS_USED=");
+    Serial.print(gps.satsused() == TinyGPS::GPS_INVALID_SATELLITES ? 0 : gps.satsused());
+    Serial.print(" FIX_TYPE=");
+    Serial.print(gps.fixtype() == TinyGPS::GPS_INVALID_FIXTYPE ? 0 : gps.fixtype());
     Serial.print(" PREC=");
     Serial.print(gps.hdop() == TinyGPS::GPS_INVALID_HDOP ? 0 : gps.hdop());
   }
