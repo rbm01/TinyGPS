@@ -238,7 +238,6 @@ bool TinyGPS::term_complete()
     //printf("TinyGPS::term_complete(): inside \"if (_is_checksum_term).  checksum=0x%02x  _parity=0x%02x\"\n", checksum, _parity);
     if (checksum == _parity)
     {
-      //printf("TinyGPS::term_complete(): inside \"if (checksum == _parity)\". _gps_time_good=%s\n", _gps_time_good ? "true" : "false");
 #ifndef _GPS_NO_STATS
       ++_good_sentences;
 #endif
@@ -249,7 +248,10 @@ bool TinyGPS::term_complete()
         _time      = _new_time;
         _date      = _new_date;
         _last_time_fix = _new_time_fix;
-        _last_position_fix = _new_position_fix;
+        if (_gps_data_good)
+        {
+            _last_position_fix = _new_position_fix;
+        }
         _latitude  = _new_latitude;
         _longitude = _new_longitude;
         _speed     = _new_speed;
@@ -257,7 +259,10 @@ bool TinyGPS::term_complete()
         // printf("TinyGPS::term_complete(): inside \"case _GPS_SENTENCE_GPRMC\".\n");
         break;
       case _GPS_SENTENCE_GPGGA:
-        _last_position_fix = _new_position_fix;
+        if (_gps_data_good)
+        {
+            _last_position_fix = _new_position_fix;
+        }
         _altitude  = _new_altitude;
         _time      = _new_time;
         _latitude  = _new_latitude;
@@ -303,8 +308,10 @@ bool TinyGPS::term_complete()
     return false;
   }
 
-  if (_sentence_type == _GPS_SENTENCE_GPGSV && _term_number == 3
-      && _term[0])
+  if (! _term[0])
+    return false;
+
+  if (_sentence_type == _GPS_SENTENCE_GPGSV && _term_number == 3)
   {
     // we've got our number of sats
     // NOTE: we will more than likely hit this a few times in a row, because
@@ -315,11 +322,11 @@ bool TinyGPS::term_complete()
   }
   else if (_sentence_type == _GPS_SENTENCE_GPGSA)
   {
-    if (_term_number == 2 && _term[0])  // Fix type
+    if (_term_number == 2)  // Fix type
     {
       _new_fixtype = (unsigned char) gpsatol(_term);
     }
-    else if (_term_number >= 3 && _term_number <= 14 && _term[0])
+    else if (_term_number >= 3 && _term_number <= 14)
     {
       // Count our satellites used
       _new_satsused++;
@@ -328,7 +335,7 @@ bool TinyGPS::term_complete()
 //  if (_term_number == 16)  // HDOP
 //  if (_term_number == 17)  // VDOP
   }       
-  else if (_sentence_type != _GPS_SENTENCE_OTHER && _term[0])
+  else if (_sentence_type != _GPS_SENTENCE_OTHER)
   {
     switch(COMBINE(_sentence_type, _term_number))
     {
@@ -369,7 +376,6 @@ bool TinyGPS::term_complete()
       break;
     case COMBINE(_GPS_SENTENCE_GPRMC, 9): // Date (GPRMC)
       _new_date = gpsatol(_term);
-      _gps_time_good = (_new_time && _new_date);
       break;
     case COMBINE(_GPS_SENTENCE_GPGGA, 6): // Fix data (GPGGA)
       _gps_data_good = _term[0] > '0';
@@ -461,12 +467,15 @@ void TinyGPS::get_position(long *latitude, long *longitude, unsigned long *fix_a
   if (latitude) *latitude = _latitude;
   if (longitude) *longitude = _longitude;
 
+  if (fix_age)
+  {
 #ifdef ARDUINO
-  if (fix_age) *fix_age = _last_position_fix == GPS_INVALID_FIX_TIME ?
-   GPS_INVALID_AGE : millis() - _last_position_fix;
+    *fix_age = _last_position_fix == GPS_INVALID_FIX_TIME
+                 ? GPS_INVALID_AGE : (millis() - _last_position_fix);
 #else /* ARDUINO */
-  if (fix_age) *fix_age = 0;
+    *fix_age = 0;
 #endif /* ARDUINO */
+  }
 }
 
 // date as ddmmyy, time as hhmmsscc, and age in milliseconds
