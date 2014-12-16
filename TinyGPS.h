@@ -108,6 +108,7 @@ public:
   void f_get_position(float *latitude, float *longitude, unsigned long *fix_age = 0);
   void crack_datetime(int *year, byte *month, byte *day, 
     byte *hour, byte *minute, byte *second, byte *hundredths = 0, unsigned long *fix_age = 0);
+  void  resetGPSstatusVars(void);
   float f_altitude();
   float f_course();
   float f_speed_knots();
