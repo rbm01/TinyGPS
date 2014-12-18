@@ -69,7 +69,7 @@ TinyGPS::TinyGPS()
   ,  _hdop(GPS_INVALID_HDOP)
   ,  _satsinview(GPS_INVALID_SATELLITES)
   ,  _satsused(GPS_INVALID_SATELLITES)
-  ,  _fixtype(GPS_FIX_NO_FIX)
+  ,  _fixtype(GPS_INVALID_FIXTYPE)
   ,  _last_time_fix(GPS_INVALID_FIX_TIME)
   ,  _last_position_fix(GPS_INVALID_FIX_TIME)
   ,  _last_character_received_time(0)
@@ -268,12 +268,12 @@ bool TinyGPS::term_complete()
         _latitude  = _new_latitude;
         _longitude = _new_longitude;
         _hdop      = _new_hdop;
+        _satsused  = _new_satsused;
         break;
       case _GPS_SENTENCE_GPGSV:
         _satsinview = _new_satsinview;
         break;
       case _GPS_SENTENCE_GPGSA:
-        _satsused = _new_satsused;
         _fixtype = _new_fixtype;
         break;
       }
@@ -555,7 +555,8 @@ void TinyGPS::resetGPSstatusVars(void)
 {
     _satsused   = GPS_INVALID_SATELLITES;
     _satsinview = GPS_INVALID_SATELLITES;
-    _fixtype    = GPS_FIX_NO_FIX;
+    _fixtype    = GPS_INVALID_FIXTYPE;
+    _hdop       = GPS_INVALID_HDOP;
 }
 
 float TinyGPS::f_altitude()
