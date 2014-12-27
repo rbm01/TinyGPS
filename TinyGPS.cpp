@@ -492,7 +492,7 @@ void TinyGPS::get_datetime(unsigned long *date, unsigned long *timeval, unsigned
         *timeval = tt.tm_hour * 1000000 + tt.tm_min * 10000 + tt.tm_sec * 100 + ts.tv_nsec / 10000000;
     if (age)
     {
-        *age = 130;     // just an arbitary value
+        *age = 100 + random() % 51;     // random value between 100 and 150
         //*age = 0;     // just an arbitary value
     }
 
