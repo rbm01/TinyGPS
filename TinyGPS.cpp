@@ -557,6 +557,7 @@ void TinyGPS::resetGPSstatusVars(void)
     _satsinview = GPS_INVALID_SATELLITES;
     _fixtype    = GPS_INVALID_FIXTYPE;
     _hdop       = GPS_INVALID_HDOP;
+    _altitude   = GPS_INVALID_ALTITUDE;
 }
 
 float TinyGPS::f_altitude()
