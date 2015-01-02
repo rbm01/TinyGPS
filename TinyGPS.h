@@ -85,7 +85,11 @@ public:
   void get_datetime(unsigned long *date, unsigned long *time, unsigned long *age = 0);
 
   // signed altitude in centimeters (from GPGGA sentence)
-  inline long altitude() { return _altitude; }
+  inline long altitude() {
+      long a = _altitude;
+      _altitude = 0;            // reset value after single use
+      return a;
+  }
 
   // course in last full GPRMC sentence in 100th of a degree
   inline unsigned long course() { return _course; }
@@ -94,21 +98,43 @@ public:
   inline unsigned long speed() { return _speed; }
 
   // horizontal dilution of precision in 100ths
-  inline unsigned long hdop() { return _hdop; }
+  inline unsigned long hdop() {
+      unsigned long a = _hdop;
+      _hdop = 0;            // reset value after single use
+      return a;
+  }
 
-    // number of satellites in view (GPGSV sentence)
-  unsigned char satsinview() { return _satsinview; }
+  // number of satellites in view (GPGSV sentence)
+  inline unsigned char satsinview() {
+      unsigned char a = _satsinview;
+      _satsinview = 0;            // reset value after single use
+      return a;
+  }
 
   // number of satellites used for fix (GPGSA sentence)
-  unsigned char satsused() { return _satsused; }
+  inline unsigned char satsused() {
+      unsigned char a = _satsused;
+      _satsused = 0;            // reset value after single use
+      return a;
+  }
   
   // get the fix type
-  unsigned char fixtype() { return _fixtype; }
+  inline unsigned char fixtype() {
+      unsigned char a = _fixtype;
+      _fixtype = 0;            // reset value after single use
+      return a;
+  }
 
   void f_get_position(float *latitude, float *longitude, unsigned long *fix_age = 0);
   void crack_datetime(int *year, byte *month, byte *day, 
-    byte *hour, byte *minute, byte *second, byte *hundredths = 0, unsigned long *fix_age = 0);
-  void  resetGPSstatusVars(void);
+  byte *hour, byte *minute, byte *second, byte *hundredths = 0, unsigned long *fix_age = 0);
+  inline void  resetGPSstatusVars(void) {
+    _satsused   = GPS_INVALID_SATELLITES;
+    _satsinview = GPS_INVALID_SATELLITES;
+    _fixtype    = GPS_INVALID_FIXTYPE;
+    _hdop       = GPS_INVALID_HDOP;
+    _altitude   = GPS_INVALID_ALTITUDE;
+  }
   float f_altitude();
   float f_course();
   float f_speed_knots();

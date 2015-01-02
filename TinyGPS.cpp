@@ -263,18 +263,18 @@ bool TinyGPS::term_complete()
         {
             _last_position_fix = _new_position_fix;
         }
-        _altitude  = _new_altitude;
+        _altitude  = _new_altitude;     _new_altitude   = 0;
         _time      = _new_time;
         _latitude  = _new_latitude;
         _longitude = _new_longitude;
-        _hdop      = _new_hdop;
-        _satsused  = _new_satsused;
+        _hdop      = _new_hdop;         _new_hdop       = 0;
+        _satsused  = _new_satsused;     _new_satsused   = 0;
         break;
       case _GPS_SENTENCE_GPGSV:
-        _satsinview = _new_satsinview;
+        _satsinview = _new_satsinview;  _new_satsinview = 0;
         break;
       case _GPS_SENTENCE_GPGSA:
-        _fixtype = _new_fixtype;
+        _fixtype = _new_fixtype;        _new_fixtype    = 0;
         break;
       }
 
@@ -545,19 +545,6 @@ void TinyGPS::crack_datetime(int *year, byte *month, byte *day,
   t2 = t1 / 100;              // t2 contains hh
   if (hour) *hour = t2;
   if (minute) *minute = t1 - (t2 * 100);
-}
-
-/*
- * Reset some GPS status variables. This should be called when GPS fix
- * is lost.
- */
-void TinyGPS::resetGPSstatusVars(void)
-{
-    _satsused   = GPS_INVALID_SATELLITES;
-    _satsinview = GPS_INVALID_SATELLITES;
-    _fixtype    = GPS_INVALID_FIXTYPE;
-    _hdop       = GPS_INVALID_HDOP;
-    _altitude   = GPS_INVALID_ALTITUDE;
 }
 
 float TinyGPS::f_altitude()
