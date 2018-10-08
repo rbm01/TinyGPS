@@ -1,0 +1,37 @@
+I originally started work with, what turned out to be, a snapshot of the
+Github version:
+  https://github.com/mikalhart/TinyGPS.git
+and then made changes from there. These changes were done under CVS
+control and later migrated to Git.
+
+With greater understanding of Git I have now created a clone from
+https://github.com/mikalhart/TinyGPS.git and then grafted my version onto it
+using the following procedure:
+
+ $ git clone https://github.com/mikalhart/TinyGPS.git
+ $ remoteUrl=git@bitbucket.org:rbm01/__tinygps.git
+
+ # Fetch all branches and tags
+ $ git fetch --tags --append ${remoteUrl} `git ls-remote --heads ${remoteUrl} | sed -e 's@^.*\trefs/heads/@@'`
+
+ $ git replace --graft a68d657 db4ef9c
+                       ^^^^^^^ ^^^^^^^
+                          |    Head (master) of
+                          |      https://github.com/mikalhart/TinyGPS.git
+                          |
+                 Change the parent of this commit to be
+             the head of https://github.com/mikalhart/TinyGPS.git
+
+ # Remove unnecessary tag that is on a commit prior to the graft point
+ $ git tag -d BASELINE_VERSION_CIRCA_SEPT_2013
+
+ # Reset master to the head of the branch that was just grafted onto the old head
+ $ git checkout -B master de22d5a
+
+ # Regenerate all hashes
+ $ git filter-branch -f --tag-name-filter cat -- --all
+
+ # Tidy up the new repo
+ $ git for-each-ref --format='git update-ref -d "%(refname)"' refs/original | sh
+ $ git for-each-ref --format='git replace -d "%(refname:strip=2)"' refs/replace | sh
+ $ git reflog expire --expire=now --all && git gc --prune=now
