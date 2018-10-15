@@ -67,6 +67,7 @@ TinyGPS::TinyGPS()
   ,  _speed(GPS_INVALID_SPEED)
   ,  _course(GPS_INVALID_ANGLE)
   ,  _hdop(GPS_INVALID_HDOP)
+  ,  _pdop(GPS_INVALID_PDOP)
   ,  _satsinview(GPS_INVALID_SATELLITES)
   ,  _satsused(GPS_INVALID_SATELLITES)
   ,  _fixtype(GPS_INVALID_FIXTYPE)
@@ -275,6 +276,7 @@ bool TinyGPS::term_complete()
         break;
       case _GPS_SENTENCE_GPGSA:
         _fixtype = _new_fixtype;        _new_fixtype    = 0;
+        _pdop    = _new_pdop;           _new_pdop       = 0;
         break;
       }
 
@@ -322,6 +324,9 @@ bool TinyGPS::term_complete()
     break;
   case COMBINE(_GPS_SENTENCE_GPGSA, 2): // Fix type
     _new_fixtype = (unsigned char) gpsatol(_term);
+    break;
+  case COMBINE(_GPS_SENTENCE_GPGSA, 15): // PDOP (position dilution of precision)
+    _new_pdop = parse_decimal();
     break;
   case COMBINE(_GPS_SENTENCE_GPRMC, 3): // Latitude
   case COMBINE(_GPS_SENTENCE_GPGGA, 2):

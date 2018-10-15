@@ -62,6 +62,7 @@ public:
     GPS_INVALID_FIX_TIME   = 0xFFFFFFFF,
     GPS_INVALID_SATELLITES = 0xFF,
     GPS_INVALID_HDOP       = 0xFFFFFFFF,
+    GPS_INVALID_PDOP       = 0xFFFFFFFF,
     GPS_INVALID_FIXTYPE    = 0xFF
   };
     
@@ -104,6 +105,13 @@ public:
       return a;
   }
 
+  // dilution of precision in 100ths
+  inline unsigned long pdop() {
+      unsigned long a = _pdop;
+      //_pdop = 0;            // reset value after single use
+      return a;
+  }
+
   // number of satellites in view (GPGSV sentence)
   inline unsigned char satsinview() {
       unsigned char a = _satsinview;
@@ -133,6 +141,7 @@ public:
     _satsinview = GPS_INVALID_SATELLITES;
     _fixtype    = GPS_INVALID_FIXTYPE;
     _hdop       = GPS_INVALID_HDOP;
+    _pdop       = GPS_INVALID_PDOP;
     _altitude   = GPS_INVALID_ALTITUDE;
   }
   float f_altitude();
@@ -171,6 +180,7 @@ private:
   unsigned long  _speed, _new_speed;
   unsigned long  _course, _new_course;
   unsigned long  _hdop, _new_hdop;
+  unsigned long  _pdop, _new_pdop;  // 100 * PDOP (position dilution of precision)
   unsigned char  _satsinview, _new_satsinview;
   unsigned char  _satsused, _new_satsused;
   unsigned char  _fixtype, _new_fixtype;
