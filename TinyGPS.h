@@ -62,7 +62,7 @@ public:
     GPS_INVALID_FIX_TIME   = 0xFFFFFFFF,
     GPS_INVALID_SATELLITES = 0xFF,
     GPS_INVALID_HDOP       = 0xFFFFFFFF,
-    GPS_INVALID_PDOP       = 0xFFFFFFFF,
+    GPS_INVALID_PDOP       = 0xFFFF,
     GPS_INVALID_FIXTYPE    = 0xFF
   };
     
@@ -105,11 +105,9 @@ public:
       return a;
   }
 
-  // dilution of precision in 100ths
-  inline unsigned long pdop() {
-      unsigned long a = _pdop;
-      //_pdop = 0;            // reset value after single use
-      return a;
+  // position dilution of precision in 100ths
+  inline unsigned short pdop() {
+      return _pdop;
   }
 
   // number of satellites in view (GPGSV sentence)
@@ -180,7 +178,7 @@ private:
   unsigned long  _speed, _new_speed;
   unsigned long  _course, _new_course;
   unsigned long  _hdop, _new_hdop;
-  unsigned long  _pdop, _new_pdop;  // 100 * PDOP (position dilution of precision)
+  unsigned short _pdop, _new_pdop;  // 100 * PDOP (position dilution of precision)
   unsigned char  _satsinview, _new_satsinview;
   unsigned char  _satsused, _new_satsused;
   unsigned char  _fixtype, _new_fixtype;

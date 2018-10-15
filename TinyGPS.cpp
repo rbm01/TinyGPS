@@ -326,7 +326,7 @@ bool TinyGPS::term_complete()
     _new_fixtype = (unsigned char) gpsatol(_term);
     break;
   case COMBINE(_GPS_SENTENCE_GPGSA, 15): // PDOP (position dilution of precision)
-    _new_pdop = parse_decimal();
+      _new_pdop = (unsigned short)parse_decimal();
     break;
   case COMBINE(_GPS_SENTENCE_GPRMC, 3): // Latitude
   case COMBINE(_GPS_SENTENCE_GPGGA, 2):
