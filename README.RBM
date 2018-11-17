@@ -1,12 +1,10 @@
-I originally started work with, what turned out to be, a snapshot of the
-Github version:
+I originally started work with, what turned out to be, a snapshot of the Github version:
   https://github.com/mikalhart/TinyGPS.git
-and then made changes from there. These changes were done under CVS
-control and later migrated to Git.
+and then made changes from there. These changes were done under CVS control and later migrated to Git.
 
 With greater understanding of Git I have now created a clone from
-https://github.com/mikalhart/TinyGPS.git and then grafted my version onto it
-using the following procedure:
+  https://github.com/mikalhart/TinyGPS.git
+and then grafted my version onto it using the following procedure:
 
  $ git clone https://github.com/mikalhart/TinyGPS.git
  $ remoteUrl=git@bitbucket.org:rbm01/__tinygps.git
