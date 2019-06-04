@@ -48,7 +48,7 @@ typedef unsigned char byte;
 #define _GPS_MILES_PER_METER 0.00062137112
 #define _GPS_KM_PER_METER 0.001
 #define _GPS_NO_STATS
-#define REDUCE_RAM_USE
+#define _GPS_TIME_ONLY
 
 class TinyGPS
 {
@@ -93,7 +93,7 @@ public:
       return a;
   }
 
-#ifndef REDUCE_RAM_USE
+#ifndef _GPS_TIME_ONLY
   // course in last full GPRMC sentence in 100th of a degree
   inline unsigned long course() { return _course; }
 
@@ -106,7 +106,7 @@ public:
       _hdop = 0;            // reset value after single use
       return a;
   }
-#endif /* REDUCE_RAM_USE */
+#endif /* _GPS_TIME_ONLY */
 
   // position dilution of precision in 100ths
   inline unsigned short pdop() {
@@ -141,9 +141,9 @@ public:
     _satsused   = GPS_INVALID_SATELLITES;
     _satsinview = GPS_INVALID_SATELLITES;
     _fixtype    = GPS_INVALID_FIXTYPE;
-#ifndef REDUCE_RAM_USE
+#ifndef _GPS_TIME_ONLY
     _hdop       = GPS_INVALID_HDOP;
-#endif /* REDUCE_RAM_USE */
+#endif /* _GPS_TIME_ONLY */
     _pdop       = GPS_INVALID_PDOP;
     _altitude   = GPS_INVALID_ALTITUDE;
   }
@@ -176,13 +176,13 @@ private:
   // properties
   unsigned long _time, _new_time;
   unsigned long _date, _new_date;
-#ifndef REDUCE_RAM_USE
+#ifndef _GPS_TIME_ONLY
   long _latitude, _new_latitude;
   long _longitude, _new_longitude;
   unsigned long  _speed, _new_speed;
   unsigned long  _course, _new_course;
   unsigned long  _hdop, _new_hdop;
-#endif /* REDUCE_RAM_USE */
+#endif /* _GPS_TIME_ONLY */
   long _altitude, _new_altitude;
   unsigned short _pdop, _new_pdop;  // 100 * PDOP (position dilution of precision)
   unsigned char  _satsinview, _new_satsinview;
