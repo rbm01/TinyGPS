@@ -92,6 +92,7 @@ public:
       return a;
   }
 
+#ifndef REDUCE_RAM_USE
   // course in last full GPRMC sentence in 100th of a degree
   inline unsigned long course() { return _course; }
 
@@ -104,6 +105,7 @@ public:
       _hdop = 0;            // reset value after single use
       return a;
   }
+#endif /* REDUCE_RAM_USE */
 
   // position dilution of precision in 100ths
   inline unsigned short pdop() {
@@ -138,7 +140,9 @@ public:
     _satsused   = GPS_INVALID_SATELLITES;
     _satsinview = GPS_INVALID_SATELLITES;
     _fixtype    = GPS_INVALID_FIXTYPE;
+#ifndef REDUCE_RAM_USE
     _hdop       = GPS_INVALID_HDOP;
+#endif /* REDUCE_RAM_USE */
     _pdop       = GPS_INVALID_PDOP;
     _altitude   = GPS_INVALID_ALTITUDE;
   }
@@ -169,15 +173,16 @@ private:
   };
 
   // properties
-  bool _use_rtc_time;           // return time even if no fix on GPS
   unsigned long _time, _new_time;
   unsigned long _date, _new_date;
+#ifndef REDUCE_RAM_USE
   long _latitude, _new_latitude;
   long _longitude, _new_longitude;
-  long _altitude, _new_altitude;
   unsigned long  _speed, _new_speed;
   unsigned long  _course, _new_course;
   unsigned long  _hdop, _new_hdop;
+#endif /* REDUCE_RAM_USE */
+  long _altitude, _new_altitude;
   unsigned short _pdop, _new_pdop;  // 100 * PDOP (position dilution of precision)
   unsigned char  _satsinview, _new_satsinview;
   unsigned char  _satsused, _new_satsused;

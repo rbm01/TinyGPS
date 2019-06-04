@@ -61,12 +61,14 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 TinyGPS::TinyGPS()
   :  _time(GPS_INVALID_TIME)
   ,  _date(GPS_INVALID_DATE)
+#ifndef REDUCE_RAM_USE
   ,  _latitude(GPS_INVALID_ANGLE)
   ,  _longitude(GPS_INVALID_ANGLE)
-  ,  _altitude(GPS_INVALID_ALTITUDE)
   ,  _speed(GPS_INVALID_SPEED)
   ,  _course(GPS_INVALID_ANGLE)
   ,  _hdop(GPS_INVALID_HDOP)
+#endif /* REDUCE_RAM_USE */
+  ,  _altitude(GPS_INVALID_ALTITUDE)
   ,  _pdop(GPS_INVALID_PDOP)
   ,  _satsinview(GPS_INVALID_SATELLITES)
   ,  _satsused(GPS_INVALID_SATELLITES)
@@ -253,10 +255,12 @@ bool TinyGPS::term_complete()
         {
             _last_position_fix = _new_position_fix;
         }
+#ifndef REDUCE_RAM_USE
         _latitude  = _new_latitude;
         _longitude = _new_longitude;
         _speed     = _new_speed;
         _course    = _new_course;
+#endif /* REDUCE_RAM_USE */
         // printf("TinyGPS::term_complete(): inside \"case _GPS_SENTENCE_GPRMC\".\n");
         break;
       case _GPS_SENTENCE_GPGGA:
@@ -266,9 +270,11 @@ bool TinyGPS::term_complete()
         }
         _altitude  = _new_altitude;     _new_altitude   = 0;
         _time      = _new_time;
+#ifndef REDUCE_RAM_USE
         _latitude  = _new_latitude;
         _longitude = _new_longitude;
         _hdop      = _new_hdop;         _new_hdop       = 0;
+#endif /* REDUCE_RAM_USE */
         _satsused  = _new_satsused;     _new_satsused   = 0;
         break;
       case _GPS_SENTENCE_GPGSV:
@@ -330,7 +336,9 @@ bool TinyGPS::term_complete()
     break;
   case COMBINE(_GPS_SENTENCE_GPRMC, 3): // Latitude
   case COMBINE(_GPS_SENTENCE_GPGGA, 2):
+#ifndef REDUCE_RAM_USE
     _new_latitude = parse_degrees();
+#endif /* REDUCE_RAM_USE */
     _new_position_fix = millis();
     break;
   case COMBINE(_GPS_SENTENCE_GPGSV, 3): // Satellites in view
@@ -343,23 +351,33 @@ bool TinyGPS::term_complete()
     break;
   case COMBINE(_GPS_SENTENCE_GPRMC, 4): // N/S
   case COMBINE(_GPS_SENTENCE_GPGGA, 3):
+#ifndef REDUCE_RAM_USE
     if (_term[0] == 'S')
       _new_latitude = -_new_latitude;
+#endif /* REDUCE_RAM_USE */
     break;
   case COMBINE(_GPS_SENTENCE_GPRMC, 5): // Longitude
   case COMBINE(_GPS_SENTENCE_GPGGA, 4):
+#ifndef REDUCE_RAM_USE
     _new_longitude = parse_degrees();
+#endif /* REDUCE_RAM_USE */
     break;
   case COMBINE(_GPS_SENTENCE_GPRMC, 6): // E/W
   case COMBINE(_GPS_SENTENCE_GPGGA, 5):
+#ifndef REDUCE_RAM_USE
     if (_term[0] == 'W')
       _new_longitude = -_new_longitude;
+#endif /* REDUCE_RAM_USE */
     break;
   case COMBINE(_GPS_SENTENCE_GPRMC, 7): // Speed (GPRMC)
+#ifndef REDUCE_RAM_USE
     _new_speed = parse_decimal();
+#endif /* REDUCE_RAM_USE */
     break;
   case COMBINE(_GPS_SENTENCE_GPRMC, 8): // Course (GPRMC)
+#ifndef REDUCE_RAM_USE
     _new_course = parse_decimal();
+#endif /* REDUCE_RAM_USE */
     break;
   case COMBINE(_GPS_SENTENCE_GPRMC, 9): // Date (GPRMC)
     _new_date = gpsatol(_term);
@@ -371,7 +389,9 @@ bool TinyGPS::term_complete()
     _new_satsused = (unsigned char) gpsatol(_term);
     break;
   case COMBINE(_GPS_SENTENCE_GPGGA, 8): // HDOP
+#ifndef REDUCE_RAM_USE
     _new_hdop = parse_decimal();
+#endif /* REDUCE_RAM_USE */
     break;
   case COMBINE(_GPS_SENTENCE_GPGGA, 9): // Altitude (GPGGA)
     _new_altitude = parse_decimal();
@@ -453,8 +473,10 @@ const char *TinyGPS::cardinal (float course)
 // (note: versions 12 and earlier gave this value in 100,000ths of a degree.
 void TinyGPS::get_position(long *latitude, long *longitude, unsigned long *fix_age)
 {
+#ifndef REDUCE_RAM_USE
   if (latitude) *latitude = _latitude;
   if (longitude) *longitude = _longitude;
+#endif /* REDUCE_RAM_USE */
 
   if (fix_age)
   {
@@ -559,30 +581,50 @@ float TinyGPS::f_altitude()
 
 float TinyGPS::f_course()
 {
+#ifndef REDUCE_RAM_USE
   return _course == GPS_INVALID_ANGLE ? GPS_INVALID_F_ANGLE : _course / 100.0;
+#else
+  return GPS_INVALID_F_ANGLE;
+#endif /* REDUCE_RAM_USE */
 }
 
 float TinyGPS::f_speed_knots()
 {
+#ifndef REDUCE_RAM_USE
   return _speed == GPS_INVALID_SPEED ? GPS_INVALID_F_SPEED : _speed / 100.0;
+#else
+  return GPS_INVALID_F_SPEED;
+#endif /* REDUCE_RAM_USE */
 }
 
 float TinyGPS::f_speed_mph()
 {
+#ifndef REDUCE_RAM_USE
   float sk = f_speed_knots();
   return sk == GPS_INVALID_F_SPEED ? GPS_INVALID_F_SPEED : _GPS_MPH_PER_KNOT * sk;
+#else
+  return GPS_INVALID_F_SPEED;
+#endif /* REDUCE_RAM_USE */
 }
 
 float TinyGPS::f_speed_mps()
 {
+#ifndef REDUCE_RAM_USE
   float sk = f_speed_knots();
   return sk == GPS_INVALID_F_SPEED ? GPS_INVALID_F_SPEED : _GPS_MPS_PER_KNOT * sk;
+#else
+  return GPS_INVALID_F_SPEED;
+#endif /* REDUCE_RAM_USE */
 }
 
 float TinyGPS::f_speed_kmph()
 {
+#ifndef REDUCE_RAM_USE
   float sk = f_speed_knots();
   return sk == GPS_INVALID_F_SPEED ? GPS_INVALID_F_SPEED : _GPS_KMPH_PER_KNOT * sk;
+#else
+  return GPS_INVALID_F_SPEED;
+#endif /* REDUCE_RAM_USE */
 }
 
 const float TinyGPS::GPS_INVALID_F_ANGLE = 1000.0;
