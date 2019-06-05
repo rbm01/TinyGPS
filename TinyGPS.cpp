@@ -468,8 +468,11 @@ const char *TinyGPS::cardinal (float course)
 void TinyGPS::get_position(long *latitude, long *longitude, unsigned long *fix_age)
 {
 #ifndef _GPS_TIME_ONLY
-  if (latitude) *latitude = _latitude;
+  if (latitude)  *latitude  = _latitude;
   if (longitude) *longitude = _longitude;
+#else
+  if (latitude)  *latitude  = GPS_INVALID_ANGLE;
+  if (longitude) *longitude = GPS_INVALID_ANGLE;
 #endif /* _GPS_TIME_ONLY */
 
   if (fix_age)

@@ -134,6 +134,12 @@ public:
       return a;
   }
 
+  // GPS good data flag. Set from 'GPRMC validity' field, or 'fix data' in GPGGA
+  inline bool gps_good_data() { return _gps_data_good; }
+#ifdef DEBUG_GPSTIME
+  inline void set_gps_good_data(bool value) { _gps_data_good = value; }
+#endif /* DEBUG_GPSTIME */
+
   void f_get_position(float *latitude, float *longitude, unsigned long *fix_age = 0);
   void crack_datetime(int *year, byte *month, byte *day, 
   byte *hour, byte *minute, byte *second, byte *hundredths = 0, unsigned long *fix_age = 0);
