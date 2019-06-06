@@ -144,7 +144,7 @@ bool TinyGPS::encode(char c)
     // Because this character is a '$' we know it's the start of a sentence.
     if ((int32_t)(charReadTime - _last_character_received_time) > 100)
     {
-      _new_time_fix = charReadTime; // synch time fix age at start of sentence
+      _new_time_fix = charReadTime; // synch time fix age at start of paragraph
     }
 
     break;
