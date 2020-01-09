@@ -110,7 +110,9 @@ public:
 
   // position dilution of precision in 100ths
   inline unsigned short pdop() {
-      return _pdop;
+      unsigned short a = _pdop;
+      _pdop = 0;            // reset value after single use
+      return a;
   }
 
   // number of satellites in view (GPGSV sentence)
